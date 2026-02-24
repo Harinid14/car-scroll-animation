@@ -2,6 +2,8 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 
+const BASE = process.env.NODE_ENV === "production" ? "/car-scroll-animation" : "";
+
 export default function HeroSection() {
   const carRef = useRef(null);
   const greenRevealRef = useRef(null);
@@ -15,7 +17,33 @@ export default function HeroSection() {
   const BAND_HEIGHT = 280;
   const GREEN = "#4ade80";
 
+  const carStops   = ["5vw",  "22vw", "38vw", "110vw"];
+  const greenStops = ["13%",  "31%",  "47%",  "100%"];
+
+  // ── Single function that runs one animation step ──────────────────
+  const runStep = (refs) => {
+    if (isAnimating.current || stepRef.current >= 4) return;
+    isAnimating.current = true;
+
+    const next = stepRef.current + 1;
+    stepRef.current = next;
+
+    const cards = [refs.stat1, refs.stat2, refs.stat3, refs.stat4];
+
+    const tl = gsap.timeline({
+      onComplete: () => { isAnimating.current = false; },
+    });
+
+    tl.to(refs.car, { x: carStops[next - 1], duration: 0.45, ease: "power2.inOut" });
+    tl.to(refs.green, { width: greenStops[next - 1], duration: 0.45, ease: "power2.inOut" }, "<");
+    tl.to(cards[next - 1], {
+      opacity: 1, y: 0, scale: 1,
+      duration: 0.65, ease: "back.out(1.7)",
+    }, "-=0.45");
+  };
+
   useEffect(() => {
+    // Initial states
     gsap.set(carRef.current, { x: "-400px" });
     gsap.set(greenRevealRef.current, { width: "0%" });
     gsap.set(
@@ -23,43 +51,47 @@ export default function HeroSection() {
       { opacity: 0, y: 40, scale: 0.88 }
     );
 
-    // Entrance — fast
+    // Entrance
     gsap.timeline({ delay: 0.2 })
       .to(carRef.current, { x: "-60px", duration: 0.6, ease: "power3.out" })
       .to(greenRevealRef.current, { width: "4%", duration: 0.6, ease: "power3.out" }, "<");
 
-    // Spacebar steps — on step 4 car drives completely off screen right
-    const carStops   = ["5vw",  "22vw", "38vw", "110vw"];
-    const greenStops = ["13%",  "31%",  "47%",  "100%"];
+    const getRefs = () => ({
+      car: carRef.current,
+      green: greenRevealRef.current,
+      stat1: stat1Ref.current,
+      stat2: stat2Ref.current,
+      stat3: stat3Ref.current,
+      stat4: stat4Ref.current,
+    });
 
+    // ── Spacebar ──────────────────────────────────────────────────
     const handleKey = (e) => {
       if (e.code !== "Space") return;
       e.preventDefault();
-      if (isAnimating.current || stepRef.current >= 4) return;
-      isAnimating.current = true;
+      runStep(getRefs());
+    };
 
-      const next = stepRef.current + 1;
-      stepRef.current = next;
-
-      const tl = gsap.timeline({
-        onComplete: () => { isAnimating.current = false; },
-      });
-
-      tl.to(carRef.current, { x: carStops[next - 1], duration: 0.45, ease: "power2.inOut" });
-      tl.to(greenRevealRef.current, { width: greenStops[next - 1], duration: 0.45, ease: "power2.inOut" }, "<");
-
-      const cards = [stat1Ref, stat2Ref, stat3Ref, stat4Ref];
-      tl.to(cards[next - 1].current, { opacity: 1, y: 0, scale: 1, duration: 0.65, ease: "back.out(1.7)" }, "-=0.45");
+    // ── Click / Tap anywhere on screen ───────────────────────────
+    const handleClick = () => {
+      runStep(getRefs());
     };
 
     window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
+    window.addEventListener("click", handleClick);
+    window.addEventListener("touchstart", handleClick); // mobile support
+
+    return () => {
+      window.removeEventListener("keydown", handleKey);
+      window.removeEventListener("click", handleClick);
+      window.removeEventListener("touchstart", handleClick);
+    };
   }, []);
 
   return (
     <div style={{ background: "#c8c8c8", minHeight: "100vh", position: "relative", overflow: "hidden" }}>
 
-      {/* ── STAT CARDS ──────────────────────────────────────────── */}
+      {/* ── STAT CARDS ──────────────────────────────────────────────── */}
       <div ref={stat1Ref} style={{ position: "fixed", top: "7%", right: "27%", zIndex: 30 }}>
         <StatCard value="58%" label="Increase in pick up point use" bg="#c8e64c" textColor="#111" />
       </div>
@@ -73,7 +105,38 @@ export default function HeroSection() {
         <StatCard value="40%" label="Decreased in customer phone calls" bg="#f4873a" textColor="#111" />
       </div>
 
-      {/* ── MIDDLE BAND ──────────────────────────────────────────── */}
+      {/* ── CLICK HINT ──────────────────────────────────────────────── */}
+      <div style={{
+        position: "fixed",
+        bottom: "3%",
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 40,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "6px",
+        opacity: 0.5,
+        pointerEvents: "none",
+      }}>
+        <span style={{
+          fontFamily: "Arial, sans-serif",
+          fontSize: "12px",
+          color: "#333",
+          letterSpacing: "0.2em",
+          textTransform: "uppercase",
+        }}>
+          Click or press Space
+        </span>
+        <div style={{
+          width: "1px",
+          height: "30px",
+          background: "linear-gradient(to bottom, #333, transparent)",
+          animation: "pulse 1.5s infinite",
+        }} />
+      </div>
+
+      {/* ── MIDDLE BAND ─────────────────────────────────────────────── */}
       <div style={{
         position: "absolute",
         top: "50%", left: 0, right: 0,
@@ -81,26 +144,17 @@ export default function HeroSection() {
         height: `${BAND_HEIGHT}px`,
         overflow: "hidden",
       }}>
-
-        {/* Layer 1 — BLACK road — pure black so text is 100% invisible */}
+        {/* BLACK road */}
         <div style={{ position: "absolute", inset: 0, background: "#000000", zIndex: 1 }} />
 
-        {/* Layer 2 — GREEN reveal */}
+        {/* GREEN reveal */}
         <div ref={greenRevealRef} style={{
           position: "absolute", left: 0, top: 0,
           width: "0%", height: "100%",
           background: GREEN, zIndex: 2,
         }} />
 
-        {/*
-          Layer 3 — TWO copies of headline stacked:
-          
-          COPY A (black text, zIndex 3) — sits above green, VISIBLE on green, hidden on black
-          COPY B (dark text with clip) — only shows in the black zone
-          
-          Simplest trick: just use black text. On black bg = invisible. On green = visible.
-          Make road darker #111 so contrast is even better.
-        */}
+        {/* HEADLINE — black text, invisible on black, visible on green */}
         <div style={{
           position: "absolute",
           left: 0, top: "50%",
@@ -111,7 +165,6 @@ export default function HeroSection() {
           paddingLeft: "2%",
           pointerEvents: "none",
           whiteSpace: "nowrap",
-          // Clip text so it doesn't overflow past green area
           width: "100%",
         }}>
           {"W E L C O M E   I T Z F I Z Z".split("").map((char, i) => (
@@ -119,8 +172,6 @@ export default function HeroSection() {
               fontFamily: "'Arial Black', 'Impact', sans-serif",
               fontWeight: 900,
               fontSize: "clamp(2.6rem, 7vw, 7.5rem)",
-              // Pure black text = invisible on #111 black road
-              // Perfectly visible on green
               color: "#000000",
               lineHeight: 1,
               whiteSpace: "pre",
@@ -131,7 +182,7 @@ export default function HeroSection() {
           ))}
         </div>
 
-        {/* Layer 4 — CAR (highest layer) */}
+        {/* CAR */}
         <div ref={carRef} style={{
           position: "absolute",
           top: 0, left: 0,
@@ -140,7 +191,7 @@ export default function HeroSection() {
           zIndex: 8,
         }}>
           <img
-            src="/car-scroll-animation/car.png"
+            src={`${BASE}/car.png`}
             alt="McLaren"
             style={{
               height: `${BAND_HEIGHT}px`,
@@ -150,7 +201,6 @@ export default function HeroSection() {
             }}
           />
         </div>
-
       </div>
     </div>
   );

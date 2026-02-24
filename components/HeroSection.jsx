@@ -140,7 +140,7 @@ export default function HeroSection() {
           zIndex: 8,
         }}>
           <img
-            src="/car.png"
+            src="/car-scroll-animation/car.png"
             alt="McLaren"
             style={{
               height: `${BAND_HEIGHT}px`,

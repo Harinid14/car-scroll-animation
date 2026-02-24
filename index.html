@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ITZFIZZ — Car Scroll Animation</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #c8c8c8;
+      min-height: 100vh;
+      overflow: hidden;
+      font-family: 'Arial Black', Impact, sans-serif;
+    }
+
+    /* ── STAT CARDS ── */
+    .stat-card {
+      position: fixed;
+      z-index: 30;
+      border-radius: 14px;
+      padding: 26px 34px;
+      min-width: 240px;
+      max-width: 300px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.16);
+      opacity: 0;
+      transform: translateY(40px) scale(0.88);
+    }
+    .stat-value {
+      font-family: 'Arial Black', Impact, sans-serif;
+      font-weight: 900;
+      font-size: clamp(2rem, 3.5vw, 2.8rem);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+    .stat-label {
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.4;
+      opacity: 0.85;
+    }
+
+    #stat1 { top: 7%;    right: 27%; background: #c8e64c; color: #111; }
+    #stat2 { bottom: 9%; left: 37%;  background: #7ec8e3; color: #111; }
+    #stat3 { top: 7%;    right: 1%;  background: #2a2a2a; color: #fff; }
+    #stat4 { bottom: 9%; right: 3%;  background: #f4873a; color: #111; }
+
+    /* ── MIDDLE BAND ── */
+    #band {
+      position: absolute;
+      top: 50%;
+      left: 0; right: 0;
+      transform: translateY(-50%);
+      height: 280px;
+      overflow: hidden;
+    }
+
+    #road {
+      position: absolute;
+      inset: 0;
+      background: #000000;
+      z-index: 1;
+    }
+
+    #green-reveal {
+      position: absolute;
+      left: 0; top: 0;
+      width: 0%;
+      height: 100%;
+      background: #4ade80;
+      z-index: 2;
+    }
+
+    #headline {
+      position: absolute;
+      left: 2%;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    #headline span {
+      font-family: 'Arial Black', Impact, sans-serif;
+      font-weight: 900;
+      font-size: clamp(2.6rem, 7vw, 7.5rem);
+      color: #000000;
+      line-height: 1;
+      white-space: pre;
+      -webkit-text-stroke: 1px #000000;
+    }
+
+    #car-wrap {
+      position: absolute;
+      top: 0; left: 0;
+      height: 280px;
+      width: auto;
+      z-index: 8;
+    }
+
+    #car-img {
+      height: 280px;
+      width: auto;
+      display: block;
+      mix-blend-mode: screen;
+    }
+
+    /* ── HINT ── */
+    #hint {
+      position: fixed;
+      bottom: 3%;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 40;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      opacity: 0.6;
+      pointer-events: none;
+      transition: opacity 0.5s;
+    }
+    #hint span {
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      color: #333;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+    #hint-line {
+      width: 1px;
+      height: 30px;
+      background: linear-gradient(to bottom, #333, transparent);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.2; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- STAT CARDS -->
+  <div class="stat-card" id="stat1">
+    <div class="stat-value">58%</div>
+    <div class="stat-label">Increase in pick up point use</div>
+  </div>
+  <div class="stat-card" id="stat2">
+    <div class="stat-value">23%</div>
+    <div class="stat-label">Decreased in customer phone calls</div>
+  </div>
+  <div class="stat-card" id="stat3">
+    <div class="stat-value">27%</div>
+    <div class="stat-label">Increase in pick up point use</div>
+  </div>
+  <div class="stat-card" id="stat4">
+    <div class="stat-value">40%</div>
+    <div class="stat-label">Decreased in customer phone calls</div>
+  </div>
+
+  <!-- MIDDLE BAND -->
+  <div id="band">
+    <div id="road"></div>
+    <div id="green-reveal"></div>
+    <div id="headline">
+      <span>W E L C O M E   I T Z F I Z Z</span>
+    </div>
+    <div id="car-wrap">
+      <img id="car-img" src="car.png" alt="McLaren" />
+    </div>
+  </div>
+
+  <!-- HINT -->
+  <div id="hint">
+    <span>Click or press Space</span>
+    <div id="hint-line"></div>
+  </div>
+
+  <script>
+    const car       = document.getElementById('car-wrap');
+    const green     = document.getElementById('green-reveal');
+    const stat1     = document.getElementById('stat1');
+    const stat2     = document.getElementById('stat2');
+    const stat3     = document.getElementById('stat3');
+    const stat4     = document.getElementById('stat4');
+    const hint      = document.getElementById('hint');
+
+    const cards      = [stat1, stat2, stat3, stat4];
+    const carStops   = ["5vw", "22vw", "38vw", "110vw"];
+    const greenStops = ["13%", "31%",  "47%",  "100%"];
+
+    let step        = 0;
+    let isAnimating = false;
+
+    // ── ENTRANCE ───────────────────────────────────────────────
+    gsap.set(car, { x: -400 });
+    gsap.set(green, { width: "0%" });
+    gsap.set(cards, { opacity: 0, y: 40, scale: 0.88 });
+
+    gsap.timeline({ delay: 0.2 })
+      .to(car,   { x: -60,  duration: 0.6, ease: "power3.out" })
+      .to(green, { width: "4%", duration: 0.6, ease: "power3.out" }, "<");
+
+    // ── STEP FUNCTION ──────────────────────────────────────────
+    function runStep() {
+      if (isAnimating || step >= 4) return;
+      isAnimating = true;
+
+      const next = step;
+      step++;
+
+      const tl = gsap.timeline({
+        onComplete: () => { isAnimating = false; }
+      });
+
+      tl.to(car,   { x: carStops[next],   duration: 0.45, ease: "power2.inOut" });
+      tl.to(green, { width: greenStops[next], duration: 0.45, ease: "power2.inOut" }, "<");
+      tl.to(cards[next], { opacity: 1, y: 0, scale: 1, duration: 0.65, ease: "back.out(1.7)" }, "-=0.45");
+
+      // Hide hint after last step
+      if (step === 4) {
+        gsap.to(hint, { opacity: 0, duration: 0.4, delay: 0.5 });
+      }
+    }
+
+    // ── TRIGGERS ───────────────────────────────────────────────
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') { e.preventDefault(); runStep(); }
+    });
+    document.addEventListener('click',      runStep);
+    document.addEventListener('touchstart', runStep, { passive: true });
+  </script>
+</body>
+</html>
